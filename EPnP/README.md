@@ -1,4 +1,4 @@
-source code: https://github.com/cvlab-epfl/EPnP
+source code: opencv
 # EPnP: An Accurate O(n) Solution to the PnP Problem 
 
 We propose a non-iterative solution to the PnP problem-the estimation of the pose of a calibrated camera from n 3D-to-2D point correspondences-whose computational complexity grows linearly with *n*. 
