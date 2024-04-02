@@ -20,6 +20,9 @@ list(APPEND TARGET_LIBRARIES ${OpenCV_LIBRARIES})
 add_executable(epnp epnp/epnp.cpp)
 target_link_libraries(epnp ${TARGET_LIBRARIES} gflags)
 
+add_executable(p3p p3p/p3p.cpp p3p/p3p_demo.cpp)
+target_link_libraries(p3p ${TARGET_LIBRARIES} gflags)
+
 # add_executable(laplace laplace/laplace.cpp)
 # target_link_libraries(laplace ${TARGET_LIBRARIES} gflags)
 
