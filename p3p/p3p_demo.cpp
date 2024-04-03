@@ -35,6 +35,7 @@ int main()
   std::cout << "OpenCV's result:" << std::endl;
   std::vector<cv::Mat>().swap(rvecs);
   std::vector<cv::Mat>().swap(tvecs);
+  // article: Complete Solution Classification for the Perspective-Three-Point Problem
   nSolver = cv::solveP3P(objectPoints, imagePoints, cameraMatrix, distCoeffs, rvecs, tvecs, cv::SOLVEPNP_P3P);
   for (int i = 0; i < nSolver; ++i)
   {

@@ -12,23 +12,23 @@ class p3p
   p3p(double fx, double fy, double cx, double cy);
   p3p(cv::Mat cameraMatrix);
 
-  // one group
+
   bool solve(cv::Mat &R, cv::Mat &tvec, const cv::Mat &opoints, const cv::Mat &ipoints);
-  // several groups represented by cvmat
+
   int solve(std::vector<cv::Mat> &Rs, std::vector<cv::Mat> &tvecs, const cv::Mat &opoints, const cv::Mat &ipoints);
-  // several groups represented by array
+
   int solve(double R[4][3][3], double t[4][3],
-            double mu0, double mv0, double X0, double Y0, double Z0,
-            double mu1, double mv1, double X1, double Y1, double Z1,
-            double mu2, double mv2, double X2, double Y2, double Z2,
-            double mu3, double mv3, double X3, double Y3, double Z3,
+            double mu0, double mv0, double X0, double Y0, double Z0, // 1st pair
+            double mu1, double mv1, double X1, double Y1, double Z1, // 2nd pair
+            double mu2, double mv2, double X2, double Y2, double Z2, // 3rd pair
+            double mu3, double mv3, double X3, double Y3, double Z3, // 4th pair
             bool p4p);
-  // one group represented by array
+
   bool solve(double R[3][3], double t[3],
-             double mu0, double mv0, double X0, double Y0, double Z0,
-             double mu1, double mv1, double X1, double Y1, double Z1,
-             double mu2, double mv2, double X2, double Y2, double Z2,
-             double mu3, double mv3, double X3, double Y3, double Z3);
+             double mu0, double mv0, double X0, double Y0, double Z0,  // 1st pair
+             double mu1, double mv1, double X1, double Y1, double Z1,  // 2nd pair
+             double mu2, double mv2, double X2, double Y2, double Z2,  // 3rd pair
+             double mu3, double mv3, double X3, double Y3, double Z3); // 4th pair
 
  private:
   template <typename T>
@@ -71,7 +71,7 @@ class p3p
   // Reference : X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang; "Complete Solution Classification for the Perspective-Three-Point Problem"
   int solve_for_lengths(double lengths[4][3], double distances[3], double cosines[3]);
 
-  // 求解光心到各点的距离
+  // 求解光心到各点的距离: Complete Solution Classification for the Perspective-Three-Point Problem
   int my_solve_for_lengths(double lengths[4][3], double distances[3], double cosines[3]);
 
   bool align(double M_start[3][3],
@@ -80,6 +80,8 @@ class p3p
              double X2, double Y2, double Z2,
              double R[3][3], double T[3]);
 
+  // reference: https://blue-stone-w.top/blog/eigen/
+  // matrix, engen value, eigen vector
   bool jacobi_4x4(double *A, double *D, double *U);
 
   double fx, fy, cx, cy;

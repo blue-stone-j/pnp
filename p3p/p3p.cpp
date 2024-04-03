@@ -71,7 +71,7 @@ bool p3p::solve(cv::Mat &R, cv::Mat &tvec, const cv::Mat &opoints, const cv::Mat
 int p3p::solve(std::vector<cv::Mat> &Rs, std::vector<cv::Mat> &tvecs, const cv::Mat &opoints, const cv::Mat &ipoints)
 {
   double rotation_matrix[4][3][3] = {}, translation[4][3] = {};
-  std::vector<double> points;
+  std::vector<double> points; // 10,o0,i1,o1,...
   if (opoints.depth() == ipoints.depth())
   {
     if (opoints.depth() == CV_32F)
@@ -123,13 +123,14 @@ bool p3p::solve(double R[3][3], double t[3],
   const bool p4p = true;
   int n          = solve(Rs, ts, mu0, mv0, X0, Y0, Z0, mu1, mv1, X1, Y1, Z1, mu2, mv2, X2, Y2, Z2, mu3, mv3, X3, Y3, Z3, p4p);
 
-  if (n == 0)
-    return false;
+  if (n == 0) { return false; }
 
   for (int i = 0; i < 3; i++)
   {
     for (int j = 0; j < 3; j++)
+    {
       R[i][j] = Rs[0][i][j];
+    }
     t[i] = ts[0][i];
   }
 
@@ -143,6 +144,7 @@ int p3p::solve(double R[4][3][3], double t[4][3],
                double mu3, double mv3, double X3, double Y3, double Z3,
                bool p4p)
 {
+  // 求解任意两点与相机光心连线夹角余弦值
   if (0)
   {
     // 验证:利用公式(28)的矩阵形式计算余弦
@@ -150,9 +152,7 @@ int p3p::solve(double R[4][3][3], double t[4][3],
     cv::Mat x2 = (cv::Mat_<double>(3, 1) << mu1, mv1, 1);
 
     // 内参矩阵
-    cv::Mat K = (cv::Mat_<double>(3, 3) << fx, 0, cx,
-                 0, fy, cy,
-                 0, 0, 1);
+    cv::Mat K = (cv::Mat_<double>(3, 3) << fx, 0, cx, 0, fy, cy, 0, 0, 1);
 
     cv::Mat X = K.inv() * x1; // 公式29(b)或者说是(26b)
     std::cout << "lihengXXXX:" << X << std::endl;
@@ -169,8 +169,7 @@ int p3p::solve(double R[4][3][3], double t[4][3],
   double mk0, mk1, mk2;
   double norm;
 
-  // 求解归一化图像平面上的坐标--公式(26);
-  //  然后单位化--公式(27)
+  // 求解归一化图像平面上的坐标--公式(26);然后单位化--公式(27)
   mu0  = inv_fx * mu0 - cx_fx;
   mv0  = inv_fy * mv0 - cy_fy;            // 求解归一化图像平面上坐标:Z_C=1的平面
   norm = sqrt(mu0 * mu0 + mv0 * mv0 + 1); // 求模长
@@ -200,8 +199,7 @@ int p3p::solve(double R[4][3][3], double t[4][3],
   distances[1] = sqrt((X0 - X2) * (X0 - X2) + (Y0 - Y2) * (Y0 - Y2) + (Z0 - Z2) * (Z0 - Z2)); // d02
   distances[2] = sqrt((X0 - X1) * (X0 - X1) + (Y0 - Y1) * (Y0 - Y1) + (Z0 - Z1) * (Z0 - Z1)); // d01
 
-  // Calculate angles
-  // 公式(24) 向量内积,计算角度
+  // Calculate angles; 公式(24) 向量内积,计算角度
   double cosines[3];
   cosines[0] = mu1 * mu2 + mv1 * mv2 + mk1 * mk2; // C12
   cosines[1] = mu0 * mu2 + mv0 * mv2 + mk0 * mk2; // C02
@@ -209,7 +207,7 @@ int p3p::solve(double R[4][3][3], double t[4][3],
 
   double lengths[4][3] = {};
   int n                = my_solve_for_lengths(lengths, distances, cosines); // 自己推导实现的长度计算
-  // n = solve_for_lengths(lengths, distances, cosines);//OpenCV源码中长度计算
+  // n = solve_for_lengths(lengths, distances, cosines); // OpenCV源码中长度计算
 
 
 
@@ -218,7 +216,7 @@ int p3p::solve(double R[4][3][3], double t[4][3],
   double reproj_errors[4];
   for (int i = 0; i < n; i++)
   {
-    double M_orig[3][3];
+    double M_orig[3][3]; // coordinates of object points from solution
 
     M_orig[0][0] = lengths[i][0] * mu0;
     M_orig[0][1] = lengths[i][0] * mv0;
@@ -234,7 +232,9 @@ int p3p::solve(double R[4][3][3], double t[4][3],
 
     // ICP 求解外参矩阵
     if (!align(M_orig, X0, Y0, Z0, X1, Y1, Z1, X2, Y2, Z2, R[nb_solutions], t[nb_solutions]))
+    {
       continue;
+    }
 
     // 利用第4个点辅助选择
     if (p4p)
@@ -293,15 +293,14 @@ int p3p::solve_for_lengths(double lengths[4][3], double distances[3], double cos
   double pr = p * r, pqr = q * pr;
 
   // Check reality condition (the four points should not be coplanar)
-  if (p2 + q2 + r2 - pqr - 1 == 0)
-    return 0;
+  if (p2 + q2 + r2 - pqr - 1 == 0) { return 0; }
 
   double ab = a * b, a_2 = 2 * a;
 
   double A = -2 * b + b2 + a2 + 1 + ab * (2 - r2) - a_2;
 
   // Check reality condition
-  if (A == 0) return 0;
+  if (A == 0) { return 0; }
 
   double a_4 = 4 * a;
 
@@ -313,14 +312,12 @@ int p3p::solve_for_lengths(double lengths[4][3], double distances[3], double cos
   double temp = (p2 * (a - 1 + b) + r2 * (a - 1 - b) + pqr - a * pqr);
   double b0   = b * temp * temp;
   // Check reality condition
-  if (b0 == 0)
-    return 0;
+  if (b0 == 0) { return 0; }
 
   double real_roots[4];
   int n = solve_deg4(A, B, C, D, E, real_roots[0], real_roots[1], real_roots[2], real_roots[3]);
 
-  if (n == 0)
-    return 0;
+  if (n == 0) { return 0; }
 
   int nb_solutions = 0;
   double r3 = r2 * r, pr2 = p * r2, r3q = r3 * q;
@@ -332,8 +329,7 @@ int p3p::solve_for_lengths(double lengths[4][3], double distances[3], double cos
     double x = real_roots[i];
 
     // Check reality condition
-    if (x <= 0)
-      continue;
+    if (x <= 0) { continue; }
 
     double x2 = x * x;
 
@@ -349,14 +345,12 @@ int p3p::solve_for_lengths(double lengths[4][3], double distances[3], double cos
                                                             2 * r3q * (a_2 - b - a2 + ab - 1) + pr2 * (q2 - a_4 + 2 * (a2 - b2) + r2 * b + q2 * (a2 - a_2) + 2) + p2 * (p * (2 * (ab - a - b) + a2 + b2 + 1) + 2 * q * r * (b + a_2 - a2 - ab - 1)));
 
     // Check reality condition
-    if (b1 <= 0)
-      continue;
+    if (b1 <= 0) { continue; }
 
     double y = inv_b0 * b1;
     double v = x2 + y * y - x * y * r;
 
-    if (v <= 0)
-      continue;
+    if (v <= 0) { continue; }
 
     double Z = distances[2] / sqrt(v);
     double X = x * Z;
@@ -391,20 +385,19 @@ int p3p::my_solve_for_lengths(double lengths[4][3], double distances[3], double 
   const auto C12_2 = C12 * C12;
   const auto C123  = C23 * C13 * C12;
 
-  // 判断点是否共面
-  // Check reality condition (the four points should not be coplanar)
-  if (C23_2 + C13_2 + C12_2 - 2 * C123 - 1 == 0) // OpenCV p3p源码中该部分可能有误
+  // 判断点是否共面; Check reality condition (the four points should not be coplanar)
+  if (C23_2 + C13_2 + C12_2 - 2 * C123 - 1 == 0)
+  {
     return 0;
+  }
 
-  // TODO:判断距离是否为0 提前返回
   // 求解系数--公式(13)
   const auto K1 = std::pow(d23 / d13, 2);
   const auto K2 = std::pow(d23 / d12, 2);
 
   const auto G4 = std::pow(K1 * K2 - K1 - K2, 2) - 4 * K1 * K2 * C23_2;
   // Check reality condition
-  if (G4 == 0)
-    return 0;
+  if (G4 == 0) { return 0; }
 
   const auto G3 = 4 * (K1 * K2 - K1 - K2) * K2 * (1 - K1) * C12 + 4 * K1 * C23 * ((K1 * K2 - K1 + K2) * C13 + 2 * K2 * C12 * C23);
 
@@ -417,8 +410,7 @@ int p3p::my_solve_for_lengths(double lengths[4][3], double distances[3], double 
   double real_roots[4] = {0};
   int n                = solve_deg4(G4, G3, G2, G1, G0, real_roots[0], real_roots[1], real_roots[2], real_roots[3]);
 
-  if (n == 0)
-    return 0;
+  if (n == 0) { return 0; }
 
   int nb_solutions = 0;
 
@@ -428,27 +420,23 @@ int p3p::my_solve_for_lengths(double lengths[4][3], double distances[3], double 
     const double x = real_roots[i];
 
     // Check reality condition
-    if (x <= 0)
-      continue;
+    if (x <= 0) { continue; }
 
 
 
     // 利用公式(14)(15)求解y
     const double H1 = 2 * K1 * (C13 - C23 * x);
-    if (H1 == 0)
-      continue;
+    if (H1 == 0) { continue; }
 
     const double H0 = x * x - K1 - (K1 - 1) * ((K2 - 1) * x * x - 2 * C12 * K2 * x + K2);
-    if (H0 == 0)
-      continue;
+    if (H0 == 0) { continue; }
 
     const double y = -1 * H0 / H1;
 
 
     // 求解d1--公式(4a)
     const double v = 1 + x * x - 2 * x * C12;
-    if (v <= 0)
-      continue;
+    if (v <= 0) { continue; }
     const double d1 = d12 / std::sqrt(v);
 
 
@@ -474,7 +462,7 @@ bool p3p::align(double M_end[3][3],
 {
   // Centroids:
   double C_start[3] = {}, C_end[3] = {};
-  for (int i = 0; i < 3; i++) C_end[i] = (M_end[0][i] + M_end[1][i] + M_end[2][i]) / 3;
+  for (int i = 0; i < 3; i++) { C_end[i] = (M_end[0][i] + M_end[1][i] + M_end[2][i]) / 3; }
   C_start[0] = (X0 + X1 + X2) / 3;
   C_start[1] = (Y0 + Y1 + Y2) / 3;
   C_start[2] = (Z0 + Z1 + Z2) / 3;
@@ -488,33 +476,40 @@ bool p3p::align(double M_end[3][3],
     s[2 * 3 + j] = (Z0 * M_end[0][j] + Z1 * M_end[1][j] + Z2 * M_end[2][j]) / 3 - C_end[j] * C_start[2];
   }
 
-  double Qs[16] = {}, evs[4] = {}, U[16] = {};
+  double Qs[16] = {}, evs[4] = {}, U[16] = {}; // matrix, eigen value, engen vector
 
-  Qs[0 * 4 + 0] = s[0 * 3 + 0] + s[1 * 3 + 1] + s[2 * 3 + 2];
+  Qs[0 * 4 + 0] = s[0 * 3 + 0] + s[1 * 3 + 1] + s[2 * 3 + 2]; // diagonal
   Qs[1 * 4 + 1] = s[0 * 3 + 0] - s[1 * 3 + 1] - s[2 * 3 + 2];
   Qs[2 * 4 + 2] = s[1 * 3 + 1] - s[2 * 3 + 2] - s[0 * 3 + 0];
   Qs[3 * 4 + 3] = s[2 * 3 + 2] - s[0 * 3 + 0] - s[1 * 3 + 1];
 
-  Qs[1 * 4 + 0] = Qs[0 * 4 + 1] = s[1 * 3 + 2] - s[2 * 3 + 1];
+  Qs[1 * 4 + 0] = Qs[0 * 4 + 1] = s[1 * 3 + 2] - s[2 * 3 + 1]; // symmetrical matrix
   Qs[2 * 4 + 0] = Qs[0 * 4 + 2] = s[2 * 3 + 0] - s[0 * 3 + 2];
   Qs[3 * 4 + 0] = Qs[0 * 4 + 3] = s[0 * 3 + 1] - s[1 * 3 + 0];
   Qs[2 * 4 + 1] = Qs[1 * 4 + 2] = s[1 * 3 + 0] + s[0 * 3 + 1];
   Qs[3 * 4 + 1] = Qs[1 * 4 + 3] = s[2 * 3 + 0] + s[0 * 3 + 2];
   Qs[3 * 4 + 2] = Qs[2 * 4 + 3] = s[2 * 3 + 1] + s[1 * 3 + 2];
 
+  // U is rotation between two coordinate system
   jacobi_4x4(Qs, evs, U);
 
   // Looking for the largest eigen value:
   int i_ev      = 0;
   double ev_max = evs[i_ev];
   for (int i = 1; i < 4; i++)
+  {
     if (evs[i] > ev_max)
+    {
       ev_max = evs[i_ev = i];
+    }
+  }
 
   // Quaternion:
   double q[4];
   for (int i = 0; i < 4; i++)
+  {
     q[i] = U[i * 4 + i_ev];
+  }
 
   double q02 = q[0] * q[0], q12 = q[1] * q[1], q22 = q[2] * q[2], q32 = q[3] * q[3];
   double q0_1 = q[0] * q[1], q0_2 = q[0] * q[2], q0_3 = q[0] * q[3];
@@ -533,68 +528,96 @@ bool p3p::align(double M_end[3][3],
   R[2][1] = 2. * (q2_3 + q0_1);
   R[2][2] = q02 + q32 - q12 - q22;
 
+  // calculate translation
   for (int i = 0; i < 3; i++)
+  {
     T[i] = C_end[i] - (R[i][0] * C_start[0] + R[i][1] * C_start[1] + R[i][2] * C_start[2]);
+  }
 
   return true;
 }
 
 bool p3p::jacobi_4x4(double *A, double *D, double *U)
 {
+  // Temporary arrays to hold intermediate values during the computation.
   double B[4] = {}, Z[4] = {};
+
+  // Initialize U to the identity matrix.
   double Id[16] = {1., 0., 0., 0.,
                    0., 1., 0., 0.,
                    0., 0., 1., 0.,
                    0., 0., 0., 1.};
-
   memcpy(U, Id, 16 * sizeof(double));
 
+  // Initialize B (and subsequently D) with the diagonal elements of A,
+  // which are initial approximations of the eigenvalues.
   B[0] = A[0];
   B[1] = A[5];
   B[2] = A[10];
   B[3] = A[15];
   memcpy(D, B, 4 * sizeof(double));
 
+  // Perform up to 50 iterations of the Jacobi algorithm.
   for (int iter = 0; iter < 50; iter++)
   {
-    double sum = fabs(A[1]) + fabs(A[2]) + fabs(A[3]) + fabs(A[6]) + fabs(A[7]) + fabs(A[11]);
+    // Sum the absolute values of the off-diagonal elements of A to check for convergence.
+    double sum = fabs(A[1]) + fabs(A[2]) + fabs(A[3])
+                 + fabs(A[6]) + fabs(A[7])
+                 + fabs(A[11]);
 
+    // If sum is 0, the matrix is diagonal, and we've found the eigenvalues.
     if (sum == 0.0)
+    {
       return true;
+    }
 
+    // Determine the threshold for performing rotations.
     double tresh = (iter < 3) ? 0.2 * sum / 16. : 0.0;
     for (int i = 0; i < 3; i++)
     {
+      // Iterate over the upper triangle of A to find off-diagonal elements to "zero out".
       double *pAij = A + 5 * i + 1;
       for (int j = i + 1; j < 4; j++)
       {
         double Aij         = *pAij;
-        double eps_machine = 100.0 * fabs(Aij);
+        double eps_machine = 100.0 * fabs(Aij); // 放大该值
 
-        if (iter > 3 && fabs(D[i]) + eps_machine == fabs(D[i]) && fabs(D[j]) + eps_machine == fabs(D[j]))
+        // If we're past the first 3 iterations and the off-diagonal element is too small, ignore it.
+        // 对于前几次迭代，算法使用一个非零的旋转阈值，以便于早期更积极地进行旋转。
+        // 随着迭代的进行，这个阈值会被设置为0，从而减少不必要的旋转。
+        if (iter > 3
+            && fabs(D[i]) + eps_machine == fabs(D[i]) // 对应的元素已经为0，没必要再通过旋转使其归零
+            && fabs(D[j]) + eps_machine == fabs(D[j]))
+        {
           *pAij = 0.0;
+        }
         else if (fabs(Aij) > tresh)
         {
+          // Compute the rotation parameters to zero out Aij.
           double hh = D[j] - D[i], t;
           if (fabs(hh) + eps_machine == fabs(hh))
+          {
             t = Aij / hh;
+          }
           else
           {
             double theta = 0.5 * hh / Aij;
             t            = 1.0 / (fabs(theta) + sqrt(1.0 + theta * theta));
             if (theta < 0.0) t = -t;
           }
-
+          // Apply the rotation to zero out Aij.
           hh = t * Aij;
           Z[i] -= hh;
           Z[j] += hh;
           D[i] -= hh;
           D[j] += hh;
           *pAij = 0.0;
-
+          // Compute the rotation matrix elements.
           double c   = 1.0 / sqrt(1 + t * t);
           double s   = t * c;
           double tau = s / (1.0 + c);
+
+          // Apply rotations to A and U matrices.
           for (int k = 0; k <= i - 1; k++)
           {
             double g = A[k * 4 + i], h = A[k * 4 + j];
@@ -622,12 +645,13 @@ bool p3p::jacobi_4x4(double *A, double *D, double *U)
         }
         pAij++;
       }
-    }
+    } // endfor: have found rotation for this iteration
 
-    for (int i = 0; i < 4; i++) B[i] += Z[i];
+    for (int i = 0; i < 4; i++) { B[i] += Z[i]; }
+
     memcpy(D, B, 4 * sizeof(double));
     memset(Z, 0, 4 * sizeof(double));
-  }
+  } // endfor: have calculated eigen
 
   return false;
 }
@@ -639,7 +663,7 @@ int solve_deg2(double a, double b, double c, double &x1, double &x2)
 {
   double delta = b * b - 4 * a * c;
 
-  if (delta < 0) return 0;
+  if (delta < 0) { return 0; }
 
   double inv_2a = 0.5 / a;
 
@@ -669,8 +693,7 @@ int solve_deg3(double a, double b, double c, double d,
     if (b == 0)
     {
       // Solve first order system
-      if (c == 0)
-        return 0;
+      if (c == 0) { return 0; }
 
       x0 = -d / c;
       return 1;
@@ -752,12 +775,11 @@ int solve_deg4(double a, double b, double c, double d, double e,
   // Solve resultant cubic
   double r0, r1, r2;
   int n = solve_deg3(1, -c, d * b - 4 * e, 4 * c * e - d * d - b2 * e, r0, r1, r2);
-  if (n == 0) return 0;
+  if (n == 0) { return 0; }
 
   // Calculate R^2
   double R2 = 0.25 * b2 - c + r0, R;
-  if (R2 < 0)
-    return 0;
+  if (R2 < 0) { return 0; }
 
   R            = sqrt(R2);
   double inv_R = 1. / R;
@@ -770,7 +792,9 @@ int solve_deg4(double a, double b, double c, double d, double e,
   {
     double temp = r0 * r0 - 4 * e;
     if (temp < 0)
+    {
       D2 = E2 = -1;
+    }
     else
     {
       double sqrt_temp = sqrt(temp);
@@ -851,7 +875,7 @@ int SolveP3P(cv::InputArray _opoints, cv::InputArray _ipoints,
   cv::undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs, cv::Mat(), cameraMatrix);
 
 
-  std::vector<cv::Mat> Rs, ts, rvecs;
+  std::vector<cv::Mat> Rs, ts, rvecs; //
 
   int solutions = 0;
   if (flags == cv::SOLVEPNP_P3P)
@@ -859,7 +883,7 @@ int SolveP3P(cv::InputArray _opoints, cv::InputArray _ipoints,
     p3p P3Psolver(cameraMatrix);
     solutions = P3Psolver.solve(Rs, ts, opoints, undistortedPoints);
   }
-  else // 未扩展
+  else // 待扩展
   {
   }
 

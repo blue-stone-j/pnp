@@ -15,6 +15,9 @@ make install
 ./epnp
 ```
 
-# EPnP
+### p3p
 
-# PnPRANAAC
+
+### epnp
+
+### PnPRANAAC
