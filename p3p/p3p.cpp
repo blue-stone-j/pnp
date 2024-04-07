@@ -194,6 +194,7 @@ int p3p::solve(double R[4][3][3], double t[4][3],
   mu3 = inv_fx * mu3 - cx_fx;
   mv3 = inv_fy * mv3 - cy_fy;
 
+  // 世界坐标系中，ABC三点的距离；//世界坐标系中，ABC三点的距离；
   double distances[3];
   distances[0] = sqrt((X1 - X2) * (X1 - X2) + (Y1 - Y2) * (Y1 - Y2) + (Z1 - Z2) * (Z1 - Z2)); // d12
   distances[1] = sqrt((X0 - X2) * (X0 - X2) + (Y0 - Y2) * (Y0 - Y2) + (Z0 - Z2) * (Z0 - Z2)); // d02
@@ -205,19 +206,20 @@ int p3p::solve(double R[4][3][3], double t[4][3],
   cosines[1] = mu0 * mu2 + mv0 * mv2 + mk0 * mk2; // C02
   cosines[2] = mu0 * mu1 + mv0 * mv1 + mk0 * mk1; // C01
 
+  // 吴消元法求解PA，PB，PC的值，有四组解；
   double lengths[4][3] = {};
-  int n                = my_solve_for_lengths(lengths, distances, cosines); // 自己推导实现的长度计算
+  int n                = my_solve_for_lengths(lengths, distances, cosines);
   // n = solve_for_lengths(lengths, distances, cosines); // OpenCV源码中长度计算
-
-
 
   // 利用公式(30) 计算点在相机坐标系下的坐标
   int nb_solutions = 0;
   double reproj_errors[4];
   for (int i = 0; i < n; i++)
   {
-    double M_orig[3][3]; // coordinates of object points from solution
+    // coordinates of object points from solution in camera frame
+    double M_orig[3][3];
 
+    // 对每个点求坐标值，单位向量乘以距离；
     M_orig[0][0] = lengths[i][0] * mu0;
     M_orig[0][1] = lengths[i][0] * mv0;
     M_orig[0][2] = lengths[i][0] * mk0;
@@ -230,7 +232,7 @@ int p3p::solve(double R[4][3][3], double t[4][3],
     M_orig[2][1] = lengths[i][2] * mv2;
     M_orig[2][2] = lengths[i][2] * mk2;
 
-    // ICP 求解外参矩阵
+    // ICP 求每个解对应的外参矩阵
     if (!align(M_orig, X0, Y0, Z0, X1, Y1, Z1, X2, Y2, Z2, R[nb_solutions], t[nb_solutions]))
     {
       continue;
@@ -239,11 +241,12 @@ int p3p::solve(double R[4][3][3], double t[4][3],
     // 利用第4个点辅助选择
     if (p4p)
     {
-      double X3p                  = R[nb_solutions][0][0] * X3 + R[nb_solutions][0][1] * Y3 + R[nb_solutions][0][2] * Z3 + t[nb_solutions][0];
-      double Y3p                  = R[nb_solutions][1][0] * X3 + R[nb_solutions][1][1] * Y3 + R[nb_solutions][1][2] * Z3 + t[nb_solutions][1];
-      double Z3p                  = R[nb_solutions][2][0] * X3 + R[nb_solutions][2][1] * Y3 + R[nb_solutions][2][2] * Z3 + t[nb_solutions][2];
-      double mu3p                 = X3p / Z3p;
-      double mv3p                 = Y3p / Z3p;
+      double X3p  = R[nb_solutions][0][0] * X3 + R[nb_solutions][0][1] * Y3 + R[nb_solutions][0][2] * Z3 + t[nb_solutions][0];
+      double Y3p  = R[nb_solutions][1][0] * X3 + R[nb_solutions][1][1] * Y3 + R[nb_solutions][1][2] * Z3 + t[nb_solutions][1];
+      double Z3p  = R[nb_solutions][2][0] * X3 + R[nb_solutions][2][1] * Y3 + R[nb_solutions][2][2] * Z3 + t[nb_solutions][2];
+      double mu3p = X3p / Z3p;
+      double mv3p = Y3p / Z3p;
+      // 通过R，t计算第4个点的重投影误差
       reproj_errors[nb_solutions] = (mu3p - mu3) * (mu3p - mu3) + (mv3p - mv3) * (mv3p - mv3);
     }
 
@@ -252,7 +255,7 @@ int p3p::solve(double R[4][3][3], double t[4][3],
 
   if (p4p)
   {
-    // sort the solutions
+    // sort the solutions; 选择重投影误差最小的解
     for (int i = 1; i < nb_solutions; i++)
     {
       for (int j = i; j > 0 && reproj_errors[j - 1] > reproj_errors[j]; j--)
@@ -281,6 +284,7 @@ int p3p::solve(double R[4][3][3], double t[4][3],
 
 int p3p::solve_for_lengths(double lengths[4][3], double distances[3], double cosines[3])
 {
+  // 吴消元法，数据准备
   double p = cosines[0] * 2;
   double q = cosines[1] * 2;
   double r = cosines[2] * 2;
@@ -299,7 +303,7 @@ int p3p::solve_for_lengths(double lengths[4][3], double distances[3], double cos
 
   double A = -2 * b + b2 + a2 + 1 + ab * (2 - r2) - a_2;
 
-  // Check reality condition
+  // Check reality condition; A, B, C, D, E 为四次多项式的系数；
   if (A == 0) { return 0; }
 
   double a_4 = 4 * a;
@@ -314,6 +318,7 @@ int p3p::solve_for_lengths(double lengths[4][3], double distances[3], double cos
   // Check reality condition
   if (b0 == 0) { return 0; }
 
+  // 求解四次多项式；
   double real_roots[4];
   int n = solve_deg4(A, B, C, D, E, real_roots[0], real_roots[1], real_roots[2], real_roots[3]);
 
@@ -334,15 +339,15 @@ int p3p::solve_for_lengths(double lengths[4][3], double distances[3], double cos
     double x2 = x * x;
 
     double b1 =
-        ((1 - a - b) * x2 + (q * a - q) * x + 1 - a + b) * (((r3 * (a2 + ab * (2 - r2) - a_2 + b2 - 2 * b + 1)) * x +
-
-                                                             (r3q * (2 * (b - a2) + a_4 + ab * (r2 - 2) - 2) + pr2 * (1 + a2 + 2 * (ab - a - b) + r2 * (b - b2) + b2)))
-                                                                * x2
-                                                            +
+        ((1 - a - b) * x2 + (q * a - q) * x + 1 - a + b) * (((r3 * (a2 + ab * (2 - r2) - a_2 + b2 - 2 * b + 1)) * x + (r3q * (2 * (b - a2) + a_4 + ab * (r2 - 2) - 2) + pr2 * (1 + a2 + 2 * (ab - a - b) + r2 * (b - b2) + b2))) * x2 +
 
                                                             (r3 * (q2 * (1 - 2 * a + a2) + r2 * (b2 - ab) - a_4 + 2 * (a2 - b2) + 2) + r * p2 * (b2 + 2 * (ab - b - a) + 1 + a2) + pr2 * q * (a_4 + 2 * (b - ab - a2) - 2 - r2 * b)) * x +
 
-                                                            2 * r3q * (a_2 - b - a2 + ab - 1) + pr2 * (q2 - a_4 + 2 * (a2 - b2) + r2 * b + q2 * (a2 - a_2) + 2) + p2 * (p * (2 * (ab - a - b) + a2 + b2 + 1) + 2 * q * r * (b + a_2 - a2 - ab - 1)));
+                                                            2 * r3q * (a_2 - b - a2 + ab - 1) +
+
+                                                            pr2 * (q2 - a_4 + 2 * (a2 - b2) + r2 * b + q2 * (a2 - a_2) + 2) +
+
+                                                            p2 * (p * (2 * (ab - a - b) + a2 + b2 + 1) + 2 * q * r * (b + a_2 - a2 - ab - 1)));
 
     // Check reality condition
     if (b1 <= 0) { continue; }
