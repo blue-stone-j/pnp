@@ -15,9 +15,13 @@ make install
 ./epnp
 ```
 
-### p3p
+### BA
+Bundle Adjustment. A non-linear solution.
 
+### p3p
+Calculate pose of camera by 3 pairs of 2D pixel and 3D coordinate.
 
 ### epnp
 
 ### PnPRANAAC
+

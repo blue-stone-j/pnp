@@ -5,9 +5,6 @@
 
 #include <vector>
 
-// reference: https://www.jianshu.com/p/b3e9fb2ad0dc
-// article: <EPnP: An Accurate O(n) Solution to the PnP Problem>
-// You can find it in folder "reference", my repo "example".
 // "equation 5" in my comment means equation 5 in this article
 class EPnP
 {
@@ -19,6 +16,7 @@ class EPnP
   void add_correspondence(const double X, const double Y, const double Z,
                           const double u, const double v);
 
+  // entry function
   void compute_pose(cv::Mat &R, cv::Mat &t);
 
  private:
@@ -69,14 +67,16 @@ class EPnP
   double dot(const double *v1, const double *v2);
   double dist2(const double *p1, const double *p2);
 
-  void compute_rho(double *rho); // distances between control points in world frame
+  // distances between control points in world frame
+  void compute_rho(double *rho);
+  // Calculate l in case N = 4. l: left term of equation is square of distance in camera frame.
   void compute_L_6x10(const double *ut, double *l_6x10);
 
   void gauss_newton(const cv::Mat L_6x10, const cv::Mat Rho, double current_betas[4]);
   void compute_A_and_b_gauss_newton(const double *l_6x10, const double *rho, const double cb[4], cv::Mat A, cv::Mat b);
 
   double compute_R_and_t(const double *ut, const double *betas, double R[3][3], double t[3]);
-
+  // point in world = camera in world * point in camera
   void estimate_R_and_t(double R[3][3], double t[3]);
 
   void copy_R_and_t(const double R_dst[3][3], const double t_dst[3], double R_src[3][3], double t_src[3]);

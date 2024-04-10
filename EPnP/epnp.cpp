@@ -63,7 +63,7 @@ EPnP::~EPnP()
 
 void EPnP::choose_control_points(void)
 {
-  // Take C0 as the reference points centroid:
+  // Take C0 as the reference points centroid
   cws[0][0] = cws[0][1] = cws[0][2] = 0;
   for (int i = 0; i < number_of_correspondences; i++)
   {
@@ -124,7 +124,7 @@ void EPnP::choose_control_points(void)
     {
       cws[i][j] = cws[0][j] + k * uct[3 * (i - 1) + j];
     }
-  }
+  } // todo: add blog
 }
 
 void EPnP::compute_barycentric_coordinates(void)
@@ -143,7 +143,7 @@ void EPnP::compute_barycentric_coordinates(void)
     }
   }
 
-  cv::invert(CC, CC_inv, cv::DECOMP_SVD); // (src, dst, method): get invert of src
+  cv::invert(CC, CC_inv, cv::DECOMP_SVD); // (src, dst, method): get inverse of src
   double *ci = cc_inv;
   // calculate new coordinates of 3d points in this new set of basis
   for (int i = 0; i < number_of_correspondences; i++)
@@ -153,7 +153,9 @@ void EPnP::compute_barycentric_coordinates(void)
 
     for (int j = 0; j < 3; j++)
     {
-      a[1 + j] = ci[3 * j + 0] * (pi[0] - cws[0][0]) + ci[3 * j + 1] * (pi[1] - cws[0][1]) + ci[3 * j + 2] * (pi[2] - cws[0][2]); //
+      a[1 + j] = ci[3 * j + 0] * (pi[0] - cws[0][0])
+                 + ci[3 * j + 1] * (pi[1] - cws[0][1])
+                 + ci[3 * j + 2] * (pi[2] - cws[0][2]); // (pt-center)/(control-center)
     }
     a[0] = 1.0f - a[1] - a[2] - a[3];
   }
@@ -214,6 +216,7 @@ void EPnP::compute_pcs(void)
 
     for (int j = 0; j < 3; j++)
     {
+      // 3D参考点在摄像头参考坐标系下的坐标 = 3D参考点在控制点坐标系下的坐标(a) * 控制点在摄像头参考坐标下的坐标(ccs)
       pc[j] = a[0] * ccs[0][j] + a[1] * ccs[1][j] + a[2] * ccs[2][j] + a[3] * ccs[3][j];
     }
   }
@@ -271,7 +274,10 @@ void EPnP::compute_pose(cv::Mat &R, cv::Mat &t)
   double rep_errors[4] = {};
   double Rs[4][3][3] = {}, ts[4][3] = {};
 
-  // approximate value
+  /* 因为不同的初步估计可能导致优化过程收敛到不同的局部最小值。通过从不同的初步估计出发，算法可以探索参数空间的不同区域，
+     从而有可能找到更好的、全局的解决方案。*/
+
+  // approximate value from closed-form solution
   find_betas_approx_1(L_6x10, Rho, Betas[1]);
   // accurate value
   gauss_newton(L_6x10, Rho, Betas[1]);
@@ -349,6 +355,9 @@ void EPnP::estimate_R_and_t(double R[3][3], double t[3])
     pw0[j] /= number_of_correspondences;
   }
 
+  /* centriod of pw and mat A
+     centroid of pc and mat B */
+
   double abt[3 * 3] = {}, abt_d[3] = {}, abt_u[3 * 3] = {}, abt_v[3 * 3] = {};
   cv::Mat ABt   = cv::Mat(3, 3, CV_64F, abt);
   cv::Mat ABt_D = cv::Mat(3, 1, CV_64F, abt_d);
@@ -359,8 +368,8 @@ void EPnP::estimate_R_and_t(double R[3][3], double t[3])
   ABt.setTo(cv::Scalar(0));
   for (int i = 0; i < number_of_correspondences; i++)
   {
-    double *pc = &pcs[3 * i];
-    double *pw = &pws[3 * i];
+    double *pc = &pcs[3 * i]; // coordinate in camera
+    double *pw = &pws[3 * i]; // coordinate in world
 
     for (int j = 0; j < 3; j++)
     {
@@ -380,7 +389,8 @@ void EPnP::estimate_R_and_t(double R[3][3], double t[3])
     }
   }
 
-  const double det = R[0][0] * R[1][1] * R[2][2] + R[0][1] * R[1][2] * R[2][0] + R[0][2] * R[1][0] * R[2][1] - R[0][2] * R[1][1] * R[2][0] - R[0][1] * R[1][0] * R[2][2] - R[0][0] * R[1][2] * R[2][1];
+  const double det = R[0][0] * R[1][1] * R[2][2] + R[0][1] * R[1][2] * R[2][0] + R[0][2] * R[1][0] * R[2][1]
+                     - R[0][2] * R[1][1] * R[2][0] - R[0][1] * R[1][0] * R[2][2] - R[0][0] * R[1][2] * R[2][1];
 
   if (det < 0)
   {
@@ -396,6 +406,7 @@ void EPnP::estimate_R_and_t(double R[3][3], double t[3])
 
 void EPnP::solve_for_sign(void)
 {
+  // if depth is negative, make it positive
   if (pcs[2] < 0.0)
   {
     for (int i = 0; i < 4; i++)
@@ -417,8 +428,8 @@ void EPnP::solve_for_sign(void)
 
 double EPnP::compute_R_and_t(const double *ut, const double *betas, double R[3][3], double t[3])
 {
-  compute_ccs(betas, ut);
-  compute_pcs();
+  compute_ccs(betas, ut); // 控制点在摄像头参考坐标下的坐标
+  compute_pcs();          // 3D参考点在摄像头参考坐标系下的坐标
 
   solve_for_sign();
 
@@ -456,7 +467,7 @@ void EPnP::find_betas_approx_1(const cv::Mat L_6x10, const cv::Mat Rho, double *
   cv::Mat L_6x4 = cv::Mat(6, 4, CV_64F, l_6x4);
   cv::Mat B4    = cv::Mat(4, 1, CV_64F, b4);
 
-  // parse value: distaces of 6 control point pairs from 4 points
+  // parse value: distances of 6 control point pairs from 4 points
   for (int i = 0; i < 6; i++)
   {
     // set(mat, row, col, value); value = get(mat, row, col)
@@ -585,7 +596,8 @@ void EPnP::compute_L_6x10(const double *ut, double *l_6x10)
   for (int i = 0; i < 4; i++) // 4: 4 control points
   {
     int a = 0, b = 1;
-    for (int j = 0; j < 6; j++) // 6: 6 combination
+    // add current control point to all equations
+    for (int j = 0; j < 6; j++) // 6: 6 combinations/equations
     {
       dv[i][j][0] = v[i][3 * a + 0] - v[i][3 * b + 0]; // d012: xyz
       dv[i][j][1] = v[i][3 * a + 1] - v[i][3 * b + 1];
@@ -646,7 +658,12 @@ void EPnP::compute_A_and_b_gauss_newton(const double *l_6x10, const double *rho,
     rowA[3] = rowL[6] * betas[0] + rowL[7] * betas[1] + rowL[8] * betas[2] + 2 * rowL[9] * betas[3];
 
     // residual
-    b.at<double>(i, 3) = rho[i] - (rowL[0] * betas[0] * betas[0] + rowL[1] * betas[0] * betas[1] + rowL[2] * betas[1] * betas[1] + rowL[3] * betas[0] * betas[2] + rowL[4] * betas[1] * betas[2] + rowL[5] * betas[2] * betas[2] + rowL[6] * betas[0] * betas[3] + rowL[7] * betas[1] * betas[3] + rowL[8] * betas[2] * betas[3] + rowL[9] * betas[3] * betas[3]);
+    b.at<double>(i, 3) = rho[i]
+                         - (rowL[0] * betas[0] * betas[0] + rowL[1] * betas[0] * betas[1]
+                            + rowL[2] * betas[1] * betas[1] + rowL[3] * betas[0] * betas[2]
+                            + rowL[4] * betas[1] * betas[2] + rowL[5] * betas[2] * betas[2]
+                            + rowL[6] * betas[0] * betas[3] + rowL[7] * betas[1] * betas[3]
+                            + rowL[8] * betas[2] * betas[3] + rowL[9] * betas[3] * betas[3]);
 
     // cvmSet(b, i, 0,
     //        rho[i] - (rowL[0] * betas[0] * betas[0] +
@@ -685,7 +702,7 @@ void EPnP::gauss_newton(const cv::Mat L_6x10, const cv::Mat Rho, double betas[4]
 // A:6*4; B:6*1; X:4*1; AX=B
 void EPnP::qr_solve(cv::Mat A, cv::Mat b, cv::Mat X)
 {
-  const int nr = A.rows; // ???
+  const int nr = A.rows;
   const int nc = A.cols;
   if (nc <= 0 || nr <= 0)
   {

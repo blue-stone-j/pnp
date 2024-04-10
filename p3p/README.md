@@ -1,5 +1,6 @@
-### 源码来源
+### 借鉴
 1. [source code](https://blog.csdn.net/leonardohaig/article/details/120756834)
+2. [reference](https://www.cnblogs.com/mafuqiang/p/8302663.html)
 
 ### 流程
 1. 根据3D坐标和相似三角形计算点的深度
