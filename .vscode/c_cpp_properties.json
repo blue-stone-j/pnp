@@ -12,7 +12,7 @@
         "/usr/include/c++/**",
         "/usr/include/pcl-1.10",
         "/usr/include/eigen3/**",
-        "${workspaceFolder}/epnp/**"
+        "${workspaceFolder}/include/**"
       ],
       "name": "ROS",
       "intelliSenseMode": "gcc-x64",

@@ -820,11 +820,3 @@ void EPnP::qr_solve(cv::Mat A, cv::Mat b, cv::Mat X)
     pX[i] = (pb[i] - sum) / A2[i];
   }
 }
-
-int main(int argc, char **argv)
-{
-  cv::Mat cameraMatrix;
-  cv::Mat opoints;
-  cv::Mat ipoints;
-  EPnP epnp(cameraMatrix, opoints, ipoints);
-}

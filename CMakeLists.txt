@@ -17,35 +17,8 @@ set(TARGET_LIBRARIES "")
 list(APPEND TARGET_LIBRARIES ${GLOG_LIBRARIES})
 list(APPEND TARGET_LIBRARIES ${OpenCV_LIBRARIES})
 
-add_executable(epnp epnp/epnp.cpp)
+add_executable(epnp src/epnp.cpp test/epnp_node.cpp)
 target_link_libraries(epnp ${TARGET_LIBRARIES} gflags)
 
-add_executable(p3p p3p/p3p.cpp p3p/p3p_demo.cpp)
+add_executable(p3p src/p3p.cpp test/p3p_node.cpp)
 target_link_libraries(p3p ${TARGET_LIBRARIES} gflags)
-
-# add_executable(laplace laplace/laplace.cpp)
-# target_link_libraries(laplace ${TARGET_LIBRARIES} gflags)
-
-# add_executable(prewitt prewitt/prewitt.cpp)
-# target_link_libraries(prewitt ${TARGET_LIBRARIES} gflags)
-
-# add_executable(roberts roberts/roberts.cpp)
-# target_link_libraries(roberts ${TARGET_LIBRARIES} gflags)
-
-# add_executable(sobel sobel/sobel.cpp)
-# target_link_libraries(sobel ${TARGET_LIBRARIES} gflags)
-
-# ---------------------------------------------------------------------------------------
-# Install
-# ---------------------------------------------------------------------------------------
-# install(TARGETS canny prewitt
-# ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-# LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-# RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
-
-# install(DIRECTORY
-# launch
-# config
-# DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-# )
